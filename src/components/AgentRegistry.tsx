@@ -18,10 +18,16 @@ export default function AgentRegistry() {
         </h1>
 
         <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-          Every AI agent authorized to initiate
-          financial activity, and the boundaries it
-          operates within.
+          Enterprise-operated AI agents authorized to initiate
+          financial activity. Each agent is governed by an
+          accountable business owner; merchants and suppliers are
+          external counterparties the agent purchases from or pays.
         </p>
+
+        <div className="mt-3 rounded-md border border-[var(--color-accent)]/25 bg-[var(--color-accent-dim)] px-3 py-2 text-xs text-[var(--color-ink-dim)]">
+          These records represent software agents—not merchants,
+          suppliers, employees, or legal entities.
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -75,7 +81,7 @@ export default function AgentRegistry() {
                   <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-2 text-xs md:grid-cols-4">
                     <div>
                       <div className="text-[var(--color-ink-faint)]">
-                        Owner
+                        Accountable business owner
                       </div>
 
                       <div className="mt-0.5 text-[var(--color-ink)]">
@@ -86,7 +92,7 @@ export default function AgentRegistry() {
 
                     <div>
                       <div className="text-[var(--color-ink-faint)]">
-                        Per-transaction limit
+                        Delegated transaction limit
                       </div>
 
                       <div className="mt-0.5 font-mono-num text-[var(--color-ink)]">
@@ -98,7 +104,7 @@ export default function AgentRegistry() {
 
                     <div>
                       <div className="text-[var(--color-ink-faint)]">
-                        Allowed rails
+                        Authorized payment rails
                       </div>
 
                       <div className="mt-0.5 text-[var(--color-ink)]">
@@ -122,7 +128,7 @@ export default function AgentRegistry() {
 
                     <div>
                       <div className="text-[var(--color-ink-faint)]">
-                        Approved categories
+                        Permitted spending categories
                       </div>
 
                       <div className="mt-0.5 text-[var(--color-ink)]">
@@ -134,7 +140,7 @@ export default function AgentRegistry() {
 
                     <div>
                       <div className="text-[var(--color-ink-faint)]">
-                        Allowed countries
+                        Permitted transaction countries
                       </div>
 
                       <div className="mt-0.5 text-[var(--color-ink)]">
@@ -146,7 +152,7 @@ export default function AgentRegistry() {
 
                     <div className="col-span-2">
                       <div className="text-[var(--color-ink-faint)]">
-                        Daily budget —{" "}
+                        Delegated daily budget —{" "}
                         {money(agent.dailySpent)}{" "}
                         of{" "}
                         {money(agent.dailyLimit)}
