@@ -1,0 +1,39 @@
+{
+  "name": "agentic-money-movement-command-center",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A policy-driven control plane and operational digital twin for AI-initiated payments.",
+  "author": "Avik Nandi",
+  "license": "MIT",
+  "homepage": "https://avikcincy-sanju.github.io/agentic-money-movement-command-center/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/avikcincy-sanju/agentic-money-movement-command-center.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "lucide-react": "^1.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "oxlint": "^1.71.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  }
+}
