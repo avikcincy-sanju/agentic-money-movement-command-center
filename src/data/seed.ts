@@ -1,15 +1,35 @@
 import type { Agent, Policy, Rail } from "../types";
 
+const CREDENTIAL_WARNING_DAYS = 30;
+
+export function deriveCredentialStatus(
+  expiresOn: string,
+  now = Date.now(),
+): Agent["credentialStatus"] {
+  const expiry = Date.parse(`${expiresOn}T23:59:59Z`);
+
+  if (!Number.isFinite(expiry) || now > expiry) {
+    return "expired";
+  }
+
+  const warningWindowMs =
+    CREDENTIAL_WARNING_DAYS * 24 * 60 * 60 * 1000;
+
+  return expiry - now <= warningWindowMs
+    ? "expiring_soon"
+    : "valid";
+}
+
+
 export const AGENTS: Agent[] = [
   {
     id: "agent-cloud-procurement",
     name: "Cloud Procurement Agent",
-    purpose:
-      "Purchase compute, storage, and infrastructure from approved cloud vendors",
+    purpose: "Purchase compute, storage, and infrastructure from approved cloud vendors",
     owner: "Elena Marlowe",
     department: "Platform Engineering",
     trustLevel: "high",
-    credentialStatus: "valid",
+    credentialStatus: deriveCredentialStatus("2026-11-01"),
     credentialExpiresOn: "2026-11-01",
     allowedRails: ["card", "ach", "stablecoin"],
     perTransactionLimit: 1000,
@@ -26,17 +46,13 @@ export const AGENTS: Agent[] = [
     owner: "Julian Cross",
     department: "People Ops",
     trustLevel: "medium",
-    credentialStatus: "valid",
+    credentialStatus: deriveCredentialStatus("2026-09-15"),
     credentialExpiresOn: "2026-09-15",
     allowedRails: ["card"],
     perTransactionLimit: 2000,
     dailyLimit: 6000,
     dailySpent: 0,
-    approvedMerchantCategories: [
-      "airlines",
-      "hotels",
-      "ground_transport",
-    ],
+    approvedMerchantCategories: ["airlines", "hotels", "ground_transport"],
     allowedCountries: ["US", "CA", "GB", "SG", "AU"],
     status: "approval_required",
   },
@@ -47,7 +63,7 @@ export const AGENTS: Agent[] = [
     owner: "Nadia Hartwell",
     department: "Finance Operations",
     trustLevel: "high",
-    credentialStatus: "expiring_soon",
+    credentialStatus: deriveCredentialStatus("2026-07-28"),
     credentialExpiresOn: "2026-07-28",
     allowedRails: ["ach", "rtp"],
     perTransactionLimit: 50000,
@@ -63,8 +79,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-max-tx",
     name: "Maximum transaction value",
-    description:
-      "Blocks any single transaction above the agent's per-transaction limit.",
+    description: "Blocks any single transaction above the agent's per-transaction limit.",
     kind: "max_transaction_value",
     enabled: true,
     config: {},
@@ -72,8 +87,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-human-approval",
     name: "Human approval threshold",
-    description:
-      "Requires a human review for transactions above $1,000, regardless of agent limit.",
+    description: "Requires human review for transactions at or above $1,000, regardless of agent limit.",
     kind: "human_approval_threshold",
     enabled: true,
     config: { threshold: 1000 },
@@ -81,8 +95,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-merchant-category",
     name: "Merchant category allowlist",
-    description:
-      "Only permits spend in categories explicitly approved for that agent.",
+    description: "Only permits spend in categories explicitly approved for that agent.",
     kind: "merchant_allowlist",
     enabled: true,
     config: {},
@@ -90,8 +103,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-velocity",
     name: "Daily velocity limit",
-    description:
-      "Blocks a transaction if it would push the agent's cumulative daily spend over its daily limit.",
+    description: "Blocks a transaction if it would push the agent's cumulative daily spend over its daily limit.",
     kind: "velocity_limit",
     enabled: true,
     config: {},
@@ -99,8 +111,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-geography",
     name: "Geographic restriction",
-    description:
-      "Only permits transactions in countries explicitly approved for the agent.",
+    description: "Only permits transactions in countries explicitly approved for the agent.",
     kind: "geography_restriction",
     enabled: true,
     config: {},
@@ -108,8 +119,7 @@ export const POLICIES: Policy[] = [
   {
     id: "policy-stablecoin-eligibility",
     name: "Stablecoin eligibility",
-    description:
-      "Stablecoin settlement is only permitted when it saves at least 1% versus the next-best rail, and only for agents explicitly allowed the rail.",
+    description: "Stablecoin settlement is only permitted when it saves at least 1% versus the next-best rail, and only for agents explicitly allowed the rail.",
     kind: "stablecoin_eligibility",
     enabled: true,
     config: { minSavingsPct: 1 },
@@ -117,7 +127,7 @@ export const POLICIES: Policy[] = [
 ];
 
 // Base economics per rail. Route scoring perturbs these slightly per
-// transaction to simulate real-world variance such as interchange tiers and FX.
+// transaction to simulate real-world variance (interchange tiers, FX, etc).
 export const RAIL_BASE: Record<
   Rail,
   {
@@ -125,7 +135,7 @@ export const RAIL_BASE: Record<
     costPct: number;
     costFlat: number;
     speedLabel: string;
-    speedMinutes: number;
+    speedMinutes: number; // used for stage timing simulation
     reversibility: "high" | "medium" | "low";
     fraudRisk: "high" | "medium" | "low";
     merchantAcceptance: "high" | "medium" | "low";
@@ -157,7 +167,7 @@ export const RAIL_BASE: Record<
   rtp: {
     label: "RTP (real-time payments)",
     costPct: 0,
-    costFlat: 1,
+    costFlat: 1.0,
     speedLabel: "Immediate, irrevocable",
     speedMinutes: 1,
     reversibility: "low",
@@ -179,11 +189,26 @@ export const RAIL_BASE: Record<
 };
 
 export const MERCHANTS_BY_CATEGORY: Record<string, string[]> = {
-  cloud_infrastructure: ["AWS", "Azure", "Google Cloud"],
-  saas: ["Datadog", "Snowflake", "Figma"],
-  airlines: ["Delta", "United", "Singapore Airlines"],
-  hotels: ["Marriott", "Hilton"],
-  ground_transport: ["Uber for Business"],
+  cloud_infrastructure: [
+    "Northstar Cloud",
+    "BluePeak Compute",
+    "AsterGrid Infrastructure",
+  ],
+  saas: [
+    "CanvasWorks Software",
+    "Nimbus Analytics",
+    "Vertex Collaboration",
+  ],
+  airlines: [
+    "Meridian Air",
+    "Northwind Airlines",
+    "Pacific Crest Airways",
+  ],
+  hotels: [
+    "Harborstone Hotels",
+    "Summit Gate Lodging",
+  ],
+  ground_transport: ["MetroLink Business Mobility"],
   approved_suppliers: [
     "Meridian Components Ltd.",
     "Northgate Logistics",

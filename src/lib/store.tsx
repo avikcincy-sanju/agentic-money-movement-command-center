@@ -16,6 +16,7 @@ import {
 import {
   evaluateIntent,
   getHardPolicyFailures,
+  isValidTransactionAmount,
 } from "../engine/policyEngine";
 import { selectRail } from "../engine/routingEngine";
 import {
@@ -44,6 +45,31 @@ export interface ScenarioParams {
   country: string;
   deadlineMinutes: number;
   scenario: Transaction["scenario"];
+}
+
+function validateScenarioParams(params: ScenarioParams) {
+  if (!isValidTransactionAmount(params.amount)) {
+    throw new Error(
+      "Transaction amount must be a finite value of at least $0.01.",
+    );
+  }
+
+  if (
+    !Number.isFinite(params.deadlineMinutes) ||
+    params.deadlineMinutes < 1
+  ) {
+    throw new Error(
+      "Completion deadline must be a finite value of at least 1 minute.",
+    );
+  }
+
+  if (!params.merchant.trim()) {
+    throw new Error("A merchant or supplier must be selected.");
+  }
+
+  if (!params.country.trim()) {
+    throw new Error("A transaction country must be selected.");
+  }
 }
 
 interface StoreState {
@@ -196,6 +222,8 @@ export function StoreProvider({
 
   const runScenario = useCallback(
     (params: ScenarioParams): Transaction => {
+      validateScenarioParams(params);
+
       const agent = agents.find(
         (candidate) => candidate.id === params.agentId,
       );
@@ -210,7 +238,7 @@ export function StoreProvider({
         country: params.country,
         preferredSettlementCurrency: "USD",
         requestedBy:
-          now + Math.max(1, params.deadlineMinutes) * 60_000,
+          now + params.deadlineMinutes * 60_000,
       };
 
       const intent = evaluateIntent(request, agent, policies);
@@ -421,8 +449,9 @@ export function StoreProvider({
         return;
       }
 
-      if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
-        const note = "Approval amount must be greater than zero.";
+      if (!isValidTransactionAmount(finalAmount)) {
+        const note =
+          "Approval amount must be a finite value of at least $0.01.";
 
         setApprovalTasks((previous) =>
           previous.map((candidate) =>
@@ -620,6 +649,10 @@ export function StoreProvider({
         (candidate) => candidate.id === id,
       );
 
+      if (!incident || incident.status === "resolved") {
+        return;
+      }
+
       setIncidents((previous) =>
         previous.map((candidate) =>
           candidate.id === id
@@ -636,7 +669,7 @@ export function StoreProvider({
           "human:operator",
           "incident_resolved",
           `Incident ${id} marked resolved.`,
-          incident?.transactionId,
+          incident.transactionId,
         ),
         ...previous,
       ]);

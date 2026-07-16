@@ -14,11 +14,11 @@ export interface Agent {
   department: string;
   trustLevel: "high" | "medium" | "low";
   credentialStatus: "valid" | "expiring_soon" | "expired";
-  credentialExpiresOn: string;
+  credentialExpiresOn: string; // ISO date
   allowedRails: Rail[];
   perTransactionLimit: number;
   dailyLimit: number;
-  dailySpent: number;
+  dailySpent: number; // running total, resets conceptually each demo day
   approvedMerchantCategories: string[];
   allowedCountries: string[];
   status: AgentStatus;
@@ -49,7 +49,7 @@ export interface PaymentIntentRequest {
   merchantCategory: string;
   country: string;
   preferredSettlementCurrency: string;
-  requestedBy: number;
+  requestedBy: number; // epoch ms, "complete before"
 }
 
 export type IntentDecision =
@@ -89,7 +89,7 @@ export interface RailScore {
   settlementCertainty: "high" | "medium" | "low";
   eligible: boolean;
   ineligibleReason?: string;
-  score: number;
+  score: number; // computed composite, higher is better
 }
 
 export interface RouteDecision {
@@ -147,6 +147,8 @@ export type IncidentType =
   | "fx_variance"
   | "ledger_entry_missing"
   | "agent_limit_exceeded"
+  | "policy_block"
+  | "no_eligible_rail"
   | "unauthorized_credential_use"
   | "chargeback_after_settlement";
 

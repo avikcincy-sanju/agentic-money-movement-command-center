@@ -12,6 +12,59 @@ const SOFT_POLICY_KINDS = new Set<Policy["kind"]>([
   "stablecoin_eligibility",
 ]);
 
+export function isValidTransactionAmount(amount: number): boolean {
+  return Number.isFinite(amount) && amount >= 0.01;
+}
+
+function validateRequest(
+  request: PaymentIntentRequest,
+  timestamp: number,
+): PolicyEvaluation[] {
+  const evaluations: PolicyEvaluation[] = [];
+
+  if (!isValidTransactionAmount(request.maxAmount)) {
+    evaluations.push({
+      policyId: "input-valid-amount",
+      policyName: "Valid transaction amount",
+      passed: false,
+      reason:
+        "Transaction amount must be a finite value of at least $0.01.",
+    });
+  }
+
+  if (!request.merchant.trim()) {
+    evaluations.push({
+      policyId: "input-valid-merchant",
+      policyName: "Valid payment counterparty",
+      passed: false,
+      reason: "A merchant or supplier must be selected.",
+    });
+  }
+
+  if (!request.country.trim()) {
+    evaluations.push({
+      policyId: "input-valid-country",
+      policyName: "Valid transaction country",
+      passed: false,
+      reason: "A transaction country must be selected.",
+    });
+  }
+
+  if (
+    !Number.isFinite(request.requestedBy) ||
+    request.requestedBy <= timestamp
+  ) {
+    evaluations.push({
+      policyId: "input-valid-deadline",
+      policyName: "Valid completion deadline",
+      passed: false,
+      reason: "The completion deadline must be in the future.",
+    });
+  }
+
+  return evaluations;
+}
+
 function evaluatePolicy(
   policy: Policy,
   agent: Agent,
@@ -29,7 +82,6 @@ function evaluatePolicy(
   switch (policy.kind) {
     case "max_transaction_value": {
       const passed = request.maxAmount <= agent.perTransactionLimit;
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -39,11 +91,9 @@ function evaluatePolicy(
           : `$${request.maxAmount.toLocaleString()} exceeds ${agent.name}'s per-transaction limit of $${agent.perTransactionLimit.toLocaleString()}.`,
       };
     }
-
     case "human_approval_threshold": {
       const threshold = Number(policy.config.threshold ?? 1000);
       const passed = request.maxAmount < threshold;
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -53,12 +103,10 @@ function evaluatePolicy(
           : `At or above the $${threshold.toLocaleString()} human-review threshold — requires sign-off.`,
       };
     }
-
     case "merchant_allowlist": {
       const passed = agent.approvedMerchantCategories.includes(
         request.merchantCategory,
       );
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -68,11 +116,9 @@ function evaluatePolicy(
           : `"${request.merchantCategory}" is not in ${agent.name}'s approved category list (${agent.approvedMerchantCategories.join(", ")}).`,
       };
     }
-
     case "velocity_limit": {
       const projected = agent.dailySpent + request.maxAmount;
       const passed = projected <= agent.dailyLimit;
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -82,10 +128,8 @@ function evaluatePolicy(
           : `Projected daily spend $${projected.toLocaleString()} would exceed the $${agent.dailyLimit.toLocaleString()} daily limit.`,
       };
     }
-
     case "geography_restriction": {
       const passed = agent.allowedCountries.includes(request.country);
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -95,10 +139,8 @@ function evaluatePolicy(
           : `${request.country} is not in ${agent.name}'s allowed country list (${agent.allowedCountries.join(", ")}).`,
       };
     }
-
     case "stablecoin_eligibility": {
       const threshold = Number(policy.config.minSavingsPct ?? 1);
-
       return {
         policyId: policy.id,
         policyName: policy.name,
@@ -106,7 +148,6 @@ function evaluatePolicy(
         reason: `Routing will allow stablecoin only when it is credentialed and saves at least ${threshold}% versus the next-best eligible rail.`,
       };
     }
-
     default:
       return {
         policyId: policy.id,
@@ -131,7 +172,6 @@ export function getHardPolicyFailures(
     }
 
     const policy = policyById.get(evaluation.policyId);
-
     return !policy || !SOFT_POLICY_KINDS.has(policy.kind);
   });
 }
@@ -144,8 +184,22 @@ export function evaluateIntent(
   const intentId = `intent-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 7)}`;
-
   const timestamp = Date.now();
+
+  const inputFailures = validateRequest(request, timestamp);
+
+  if (inputFailures.length > 0) {
+    return {
+      intentId,
+      request,
+      decision: "declined",
+      evaluations: inputFailures,
+      explanation: `Declined: ${inputFailures
+        .map((failure) => failure.reason)
+        .join(" ")}`,
+      timestamp,
+    };
+  }
 
   if (!agent) {
     return {
@@ -177,22 +231,17 @@ export function evaluateIntent(
   const evaluations = policies.map((policy) =>
     evaluatePolicy(policy, agent, request),
   );
-
   const failed = evaluations.filter(
     (evaluation) => !evaluation.passed,
   );
-
   const hardFails = getHardPolicyFailures(evaluations, policies);
-
   const approvalPolicy = policies.find(
     (policy) =>
       policy.kind === "human_approval_threshold" && policy.enabled,
   );
-
   const approvalEvaluation = approvalPolicy
     ? failed.find(
-        (evaluation) =>
-          evaluation.policyId === approvalPolicy.id,
+        (evaluation) => evaluation.policyId === approvalPolicy.id,
       )
     : undefined;
 

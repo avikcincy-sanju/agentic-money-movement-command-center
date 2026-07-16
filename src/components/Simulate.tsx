@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { money, label } from "../lib/format";
+import { suggestedAmountForScenario } from "../lib/scenario";
 import { useStore } from "../lib/store";
 import type { Transaction } from "../types";
 import {
@@ -16,32 +17,30 @@ import {
   statusTone,
 } from "./ui";
 
+const UNLISTED_MERCHANT = "Unlisted Vendor LLC";
+
 const SCENARIOS: {
   id: Transaction["scenario"];
   title: string;
   blurb: string;
-  suggestedAmount: number;
 }[] = [
   {
     id: "happy_path",
     title: "Clean approval",
     blurb:
       "Within policy, routes successfully, settles and reconciles end to end.",
-    suggestedAmount: 475,
   },
   {
     id: "policy_violation",
     title: "Policy violation",
     blurb:
-      "Request exceeds the agent's per-transaction limit — should be declined at policy validation.",
-    suggestedAmount: 2500,
+      "Request exceeds the selected agent's per-transaction limit and should be declined at policy validation.",
   },
   {
     id: "settlement_mismatch",
     title: "Settlement mismatch",
     blurb:
       "Payment succeeds and settles, but the bank credits less than the processor's settlement file shows.",
-    suggestedAmount: 640,
   },
 ];
 
@@ -79,10 +78,14 @@ export default function Simulate({
     merchantsFor(category);
 
   const [merchant, setMerchant] =
-    useState(merchants[0] ?? "");
+    useState(merchants[0] ?? UNLISTED_MERCHANT);
 
-  const [amount, setAmount] =
-    useState(475);
+  const [amount, setAmount] = useState(
+    suggestedAmountForScenario(
+      "happy_path",
+      agent.perTransactionLimit,
+    ),
+  );
 
   const [
     deadlineMinutes,
@@ -94,6 +97,28 @@ export default function Simulate({
 
   const [result, setResult] =
     useState<Transaction | null>(null);
+
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  const amountIsValid =
+    Number.isFinite(amount) && amount >= 0.01;
+  const deadlineIsValid =
+    Number.isFinite(deadlineMinutes) && deadlineMinutes >= 1;
+  const formIsValid =
+    amountIsValid &&
+    deadlineIsValid &&
+    merchant.trim().length > 0 &&
+    country.trim().length > 0;
+
+  function clearPreviousDecision() {
+    setResult(null);
+    setFormError(null);
+  }
+
+  function defaultMerchantFor(categoryValue: string) {
+    return merchantsFor(categoryValue)[0] ?? UNLISTED_MERCHANT;
+  }
 
   function handleAgentChange(
     id: string,
@@ -111,15 +136,16 @@ export default function Simulate({
         .approvedMerchantCategories[0];
 
     setCategory(firstCategory);
-
-    setMerchant(
-      merchantsFor(firstCategory)[0] ??
-        "",
+    setMerchant(defaultMerchantFor(firstCategory));
+    setCountry(selectedAgent.allowedCountries[0]);
+    setDeadlineMinutes(60);
+    setAmount(
+      suggestedAmountForScenario(
+        scenario,
+        selectedAgent.perTransactionLimit,
+      ),
     );
-
-    setCountry(
-      selectedAgent.allowedCountries[0],
-    );
+    clearPreviousDecision();
   }
 
   function handleScenarioChange(
@@ -127,27 +153,56 @@ export default function Simulate({
   ) {
     setScenario(selectedScenario);
 
+    const firstCategory =
+      agent.approvedMerchantCategories[0];
+
+    setCategory(firstCategory);
+    setMerchant(defaultMerchantFor(firstCategory));
+    setCountry(agent.allowedCountries[0]);
+    setDeadlineMinutes(60);
     setAmount(
-      SCENARIOS.find(
-        (candidate) =>
-          candidate.id ===
-          selectedScenario,
-      )!.suggestedAmount,
+      suggestedAmountForScenario(
+        selectedScenario,
+        agent.perTransactionLimit,
+      ),
     );
+    clearPreviousDecision();
   }
 
   function handleSubmit() {
-    const transaction = runScenario({
-      agentId,
-      merchantCategory: category,
-      merchant,
-      amount,
-      country,
-      deadlineMinutes,
-      scenario,
-    });
+    if (!formIsValid) {
+      setResult(null);
+      setFormError(
+        !amountIsValid
+          ? "Enter a finite amount of at least $0.01."
+          : !deadlineIsValid
+            ? "Enter a completion deadline of at least 1 minute."
+            : "Select a valid merchant or supplier and transaction country.",
+      );
+      return;
+    }
 
-    setResult(transaction);
+    try {
+      const transaction = runScenario({
+        agentId,
+        merchantCategory: category,
+        merchant,
+        amount,
+        country,
+        deadlineMinutes,
+        scenario,
+      });
+
+      setResult(transaction);
+      setFormError(null);
+    } catch (error) {
+      setResult(null);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to submit this payment intent.",
+      );
+    }
   }
 
   const decisionIcon = useMemo(() => {
@@ -293,15 +348,11 @@ export default function Simulate({
                   const selectedCategory =
                     event.target.value;
 
-                  setCategory(
-                    selectedCategory,
-                  );
-
+                  setCategory(selectedCategory);
                   setMerchant(
-                    merchantsFor(
-                      selectedCategory,
-                    )[0] ?? "",
+                    defaultMerchantFor(selectedCategory),
                   );
+                  clearPreviousDecision();
                 }}
                 className="w-full rounded-md border border-[var(--color-border-bright)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
               >
@@ -338,11 +389,10 @@ export default function Simulate({
 
               <select
                 value={merchant}
-                onChange={(event) =>
-                  setMerchant(
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => {
+                  setMerchant(event.target.value);
+                  clearPreviousDecision();
+                }}
                 className="w-full rounded-md border border-[var(--color-border-bright)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
               >
                 {merchants.length > 0 ? (
@@ -361,8 +411,8 @@ export default function Simulate({
                     ),
                   )
                 ) : (
-                  <option value="Unlisted Vendor LLC">
-                    Unlisted Vendor LLC
+                  <option value={UNLISTED_MERCHANT}>
+                    {UNLISTED_MERCHANT}
                   </option>
                 )}
               </select>
@@ -379,14 +429,14 @@ export default function Simulate({
 
               <input
                 type="number"
+                min="0.01"
+                step="0.01"
                 value={amount}
-                onChange={(event) =>
-                  setAmount(
-                    Number(
-                      event.target.value,
-                    ),
-                  )
-                }
+                aria-invalid={!amountIsValid}
+                onChange={(event) => {
+                  setAmount(Number(event.target.value));
+                  clearPreviousDecision();
+                }}
                 className="w-full rounded-md border border-[var(--color-border-bright)] bg-[var(--color-surface-raised)] px-3 py-2 font-mono-num text-sm"
               />
             </label>
@@ -399,17 +449,13 @@ export default function Simulate({
               <input
                 type="number"
                 min="1"
+                step="1"
                 value={deadlineMinutes}
-                onChange={(event) =>
-                  setDeadlineMinutes(
-                    Math.max(
-                      1,
-                      Number(
-                        event.target.value,
-                      ),
-                    ),
-                  )
-                }
+                aria-invalid={!deadlineIsValid}
+                onChange={(event) => {
+                  setDeadlineMinutes(Number(event.target.value));
+                  clearPreviousDecision();
+                }}
                 className="w-full rounded-md border border-[var(--color-border-bright)] bg-[var(--color-surface-raised)] px-3 py-2 font-mono-num text-sm"
               />
 
@@ -427,11 +473,10 @@ export default function Simulate({
 
               <select
                 value={country}
-                onChange={(event) =>
-                  setCountry(
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => {
+                  setCountry(event.target.value);
+                  clearPreviousDecision();
+                }}
                 className="w-full rounded-md border border-[var(--color-border-bright)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
               >
                 {agent.allowedCountries.map(
@@ -454,8 +499,18 @@ export default function Simulate({
               </select>
             </label>
 
+            {formError && (
+              <div
+                role="alert"
+                className="rounded-md border border-[var(--color-danger)]/30 bg-[var(--color-danger-dim)] px-3 py-2 text-xs text-[var(--color-danger)]"
+              >
+                {formError}
+              </div>
+            )}
+
             <Button
               onClick={handleSubmit}
+              disabled={!formIsValid}
               className="w-full"
             >
               Submit agent intent
