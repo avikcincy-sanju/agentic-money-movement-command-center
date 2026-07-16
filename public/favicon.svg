@@ -1,0 +1,45 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+  role="img"
+  aria-labelledby="title"
+>
+  <title>Agentic Money Movement Command Center</title>
+
+  <rect
+    width="64"
+    height="64"
+    rx="14"
+    fill="#101720"
+  />
+
+  <circle
+    cx="32"
+    cy="32"
+    r="18"
+    fill="none"
+    stroke="#5fb0ff"
+    stroke-width="4"
+  />
+
+  <circle
+    cx="32"
+    cy="32"
+    r="6"
+    fill="#5fb0ff"
+  />
+
+  <path
+    d="M32 7v9M32 48v9M7 32h9M48 32h9"
+    stroke="#3ecf8e"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M14.5 14.5l6.5 6.5M43 43l6.5 6.5M49.5 14.5L43 21M21 43l-6.5 6.5"
+    stroke="#f0b429"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+</svg>
