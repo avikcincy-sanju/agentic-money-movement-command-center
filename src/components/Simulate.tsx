@@ -190,11 +190,12 @@ export default function Simulate({
 
         <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
           Submit a payment request on
-          behalf of an agent. The policy
-          engine and router run for real
-          against this input — nothing
-          here is scripted per scenario
-          beyond the starting numbers.
+          behalf of an enterprise-operated
+          software agent. The policy engine
+          and router run for real against
+          this input — nothing here is
+          scripted per scenario beyond the
+          starting numbers.
         </p>
       </div>
 
@@ -256,7 +257,7 @@ export default function Simulate({
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-[var(--color-ink-dim)]">
-                Agent
+                Enterprise-operated AI agent
               </span>
 
               <select
@@ -283,7 +284,7 @@ export default function Simulate({
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-[var(--color-ink-dim)]">
-                Merchant category
+                Permitted spending category
               </span>
 
               <select
@@ -332,7 +333,7 @@ export default function Simulate({
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-[var(--color-ink-dim)]">
-                Merchant
+                Merchant or supplier being paid
               </span>
 
               <select
@@ -365,6 +366,10 @@ export default function Simulate({
                   </option>
                 )}
               </select>
+
+              <span className="mt-1 block text-[11px] text-[var(--color-ink-faint)]">
+                External counterparty receiving payment from the enterprise-operated agent.
+              </span>
             </label>
 
             <label className="block">
@@ -417,7 +422,7 @@ export default function Simulate({
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-[var(--color-ink-dim)]">
-                Country
+                Transaction country
               </span>
 
               <select
