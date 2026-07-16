@@ -3,11 +3,15 @@
 [![CI](https://github.com/avikcincy-sanju/agentic-money-movement-command-center/actions/workflows/ci.yml/badge.svg)](https://github.com/avikcincy-sanju/agentic-money-movement-command-center/actions/workflows/ci.yml)
 [![Deploy to GitHub Pages](https://github.com/avikcincy-sanju/agentic-money-movement-command-center/actions/workflows/deploy.yml/badge.svg)](https://github.com/avikcincy-sanju/agentic-money-movement-command-center/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21400904.svg)](https://doi.org/10.5281/zenodo.21400904)
 
 A policy-governed control plane and operational digital twin for AI-agent-initiated payments—from intent and authorization through rail selection, settlement, reconciliation, incident response, and evidence-grounded investigation.
 
 **Live demo:**  
 https://avikcincy-sanju.github.io/agentic-money-movement-command-center/
+
+**Archived release:**  
+https://doi.org/10.5281/zenodo.21400904
 
 ![Agentic Money Movement Command Center](public/preview.png)
 
