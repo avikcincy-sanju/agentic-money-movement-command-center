@@ -515,7 +515,6 @@ Copyright © 2026 Avik Nandi.
 
 Payments, agentic commerce, financial infrastructure, and product strategy.
 
-- GitHub: [avikcincy-sanju](https://github.com/avikcincy-sanju)
 - Live prototype: [Agentic Money Movement Command Center](https://avikcincy-sanju.github.io/agentic-money-movement-command-center/)
 
 ---
